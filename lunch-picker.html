@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>今天吃哪家 · 小京</title>
+<style>
+  :root{
+    --bg1:#ffe9d6; --bg2:#ffd0b0; --bg3:#ffb894;
+    --card:#fffdfa; --ink:#4a3628; --ink-soft:#8a7361;
+    --accent:#ff7a45; --accent-dark:#e85a20; --line:#f0e2d6;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    color:var(--ink);
+    background:linear-gradient(160deg,var(--bg1) 0%,var(--bg2) 55%,var(--bg3) 100%);
+    display:flex;align-items:center;justify-content:center;
+    padding:16px;min-height:100%;
+  }
+  .app{
+    width:100%;max-width:470px;background:var(--card);
+    border-radius:26px;padding:24px 20px 18px;
+    box-shadow:0 18px 50px rgba(150,80,30,.22), 0 2px 0 #fff inset;
+  }
+  h1{margin:0 0 3px;font-size:19px;font-weight:700;letter-spacing:.5px;text-align:center;}
+  .sub{text-align:center;font-size:12px;color:var(--ink-soft);margin-bottom:16px;letter-spacing:.3px;}
+
+  .tabs{
+    display:flex;gap:7px;overflow-x:auto;padding-bottom:9px;margin-bottom:12px;
+    scrollbar-width:none;
+  }
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab{
+    flex:0 0 auto;font-size:13px;font-weight:600;padding:8px 14px;border-radius:999px;
+    background:#fff4ec;color:var(--ink-soft);border:1px solid #ffe0cc;cursor:pointer;
+    white-space:nowrap;transition:all .15s ease;user-select:none;
+  }
+  .tab:hover{filter:brightness(.98);}
+  .tab.on{background:linear-gradient(180deg,#ff9350,var(--accent));color:#fff;border-color:transparent;box-shadow:0 3px 10px rgba(255,122,69,.35);}
+
+  .stage{
+    height:140px;border-radius:20px;background:linear-gradient(180deg,#fff6ee,#ffe9dc);
+    border:1px solid var(--line);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;padding:12px;overflow:hidden;position:relative;
+  }
+  #name{font-size:28px;font-weight:800;line-height:1.25;text-align:center;letter-spacing:.5px;word-break:break-all;}
+  #name.rolling{color:var(--ink-soft);opacity:.7;}
+  #name.settle{animation:pop .45s cubic-bezier(.2,1.6,.4,1);color:var(--accent-dark);}
+  @keyframes pop{0%{transform:scale(.72);}60%{transform:scale(1.13);}100%{transform:scale(1);}}
+  #where{margin-top:5px;font-size:12px;color:#b09a8c;min-height:15px;letter-spacing:.3px;}
+  #comment{
+    margin-top:7px;font-size:13px;color:var(--ink-soft);min-height:18px;
+    letter-spacing:.3px;text-align:center;line-height:1.45;padding:0 8px;
+  }
+  #comment.say{color:var(--accent-dark);font-weight:600;animation:fadein .35s ease;}
+  @keyframes fadein{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:none;}}
+
+  .row{display:flex;gap:10px;margin-top:14px;}
+  button{
+    font-family:inherit;font-size:15px;font-weight:600;border:none;border-radius:15px;
+    cursor:pointer;padding:14px 16px;transition:transform .1s ease,filter .15s ease;
+  }
+  button:active{transform:scale(.97);}
+  button:disabled{opacity:.45;cursor:not-allowed;transform:none;}
+  .primary{
+    flex:1;color:#fff;background:linear-gradient(180deg,#ff9350,var(--accent));
+    box-shadow:0 5px 0 var(--accent-dark),0 8px 18px rgba(255,122,69,.35);
+    font-size:17px;letter-spacing:2px;
+  }
+  .primary:active:not(:disabled){box-shadow:0 2px 0 var(--accent-dark);transform:translateY(3px) scale(.99);}
+  .ghost{background:#fff4ec;color:var(--accent-dark);border:1px solid #ffd9c2;flex:1;}
+  .history{margin-top:12px;font-size:12px;color:var(--ink-soft);text-align:center;min-height:16px;letter-spacing:.3px;}
+
+  .manage{margin-top:16px;border-top:1px dashed var(--line);padding-top:12px;}
+  summary{cursor:pointer;font-size:13px;color:var(--ink-soft);list-style:none;user-select:none;text-align:center;}
+  summary::-webkit-details-marker{display:none;}
+  summary::before{content:"▸ ";}
+  details[open] summary::before{content:"▾ ";}
+
+  textarea{
+    width:100%;font-family:inherit;font-size:13px;line-height:1.6;
+    padding:11px 13px;border-radius:13px;border:1px solid var(--line);
+    background:#fffaf6;color:var(--ink);outline:none;resize:vertical;min-height:96px;
+  }
+  textarea:focus{border-color:#ffc4a3;background:#fff;}
+  .hintline{font-size:11.5px;color:#b8a294;line-height:1.7;margin:8px 0 9px;}
+  .hintline code{background:#fff2e8;padding:1px 5px;border-radius:5px;color:var(--accent-dark);}
+  .btnrow{display:flex;gap:8px;margin-bottom:16px;}
+  .btnrow button{flex:1;background:#ffe6d6;color:var(--accent-dark);padding:11px 10px;border-radius:13px;font-size:13.5px;}
+
+  .group{margin-bottom:14px;}
+  .ghead{
+    display:flex;align-items:center;justify-content:space-between;
+    font-size:13px;font-weight:700;color:var(--accent-dark);
+    padding:6px 4px 7px;border-bottom:1px solid var(--line);margin-bottom:7px;
+  }
+  .ghead .del{font-size:12px;color:#c9b5a6;cursor:pointer;font-weight:500;padding:2px 6px;border-radius:7px;}
+  .ghead .del:hover{color:#e05a3a;background:#ffe9e0;}
+  ul{list-style:none;margin:0;padding:0;}
+  li{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:8px 12px;border-radius:11px;font-size:14px;
+    background:#fffaf6;border:1px solid var(--line);margin-bottom:5px;
+  }
+  li .x{color:#c9b5a6;cursor:pointer;font-size:17px;line-height:1;padding:2px 6px;border-radius:8px;}
+  li .x:hover{color:#e05a3a;background:#ffe9e0;}
+  .empty{font-size:12.5px;color:#c3ae9f;padding:4px 6px 6px;}
+  .tools{display:flex;justify-content:center;margin-top:6px;}
+  .tools button{background:none;color:#b8a294;font-size:12px;padding:6px 10px;font-weight:500;}
+  .tools button:hover{color:var(--accent);}
+  .foot{text-align:center;font-size:11px;color:#c3ae9f;margin-top:12px;letter-spacing:.3px;}
+
+  /* ==== 口令锁（只在网上打开时出现，本地双击不拦）==== */
+  .gate{
+    position:fixed;inset:0;z-index:99;display:flex;
+    align-items:center;justify-content:center;padding:20px;
+    background:linear-gradient(160deg,var(--bg1) 0%,var(--bg2) 55%,var(--bg3) 100%);
+  }
+  html.unlocked .gate{display:none !important;}
+  .gatebox{
+    width:100%;max-width:340px;background:var(--card);border-radius:24px;
+    padding:30px 24px 24px;text-align:center;
+    box-shadow:0 18px 50px rgba(150,80,30,.25), 0 2px 0 #fff inset;
+  }
+  .gateico{font-size:44px;line-height:1;}
+  .gatetitle{font-size:19px;font-weight:800;margin:12px 0 5px;letter-spacing:.5px;}
+  .gatesub{font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;letter-spacing:.3px;}
+  .gatebox input{
+    width:100%;font-family:inherit;font-size:16px;text-align:center;
+    padding:13px 14px;border-radius:14px;border:1px solid var(--line);
+    background:#fffaf6;color:var(--ink);outline:none;letter-spacing:3px;
+  }
+  .gatebox input:focus{border-color:#ffc4a3;background:#fff;}
+  .gatebox .go{
+    width:100%;margin-top:12px;color:#fff;font-size:16px;letter-spacing:4px;
+    background:linear-gradient(180deg,#ff9350,var(--accent));
+    box-shadow:0 5px 0 var(--accent-dark);border-radius:15px;padding:13px;
+  }
+  .gateerr{font-size:12.5px;color:#e05a3a;min-height:17px;margin-top:10px;}
+  .gatebox.shake{animation:shake .4s;}
+  @keyframes shake{0%,100%{transform:none;}20%{transform:translateX(-8px);}60%{transform:translateX(8px);}}
+</style>
+<script>
+// 在页面渲染前判断：本地文件 / 已解锁过 → 直接放行，避免闪一下口令框
+(function(){
+  try{
+    if(location.protocol === "file:" || localStorage.getItem("lunch.unlocked") === "1"){
+      document.documentElement.className = "unlocked";
+    }
+  }catch(e){}
+})();
+</script>
+</head>
+<body>
+
+<div class="gate">
+  <div class="gatebox" id="gatebox">
+    <div class="gateico">🍚</div>
+    <div class="gatetitle">今天吃哪家</div>
+    <div class="gatesub">小京的私人小工具，请输入口令</div>
+    <input id="pass" type="password" autocomplete="off" placeholder="口令">
+    <button class="go" id="unlock">进 入</button>
+    <div class="gateerr" id="gateerr"></div>
+  </div>
+</div>
+
+<div class="app">
+  <h1>🍚 今天吃哪家</h1>
+  <div class="sub">选择困难症拯救器 · 先选园区，再交给运气</div>
+
+  <div class="tabs" id="tabs"></div>
+
+  <div class="stage">
+    <div id="name">准备好了吗</div>
+    <div id="where"></div>
+    <div id="comment">点下面的按钮，小京帮你决定～</div>
+  </div>
+
+  <div class="row">
+    <button id="spin" class="primary">抽 一 个</button>
+  </div>
+  <div class="row" id="afterRow" style="display:none">
+    <button id="again" class="ghost">换一个</button>
+  </div>
+
+  <div class="history" id="history"></div>
+
+  <div class="manage">
+    <details>
+      <summary>管理店铺（<span id="total">0</span> 家）</summary>
+
+      <div class="hintline">
+        <code># 园区名</code> 单独一行，下面<strong>一行一个店名</strong>。<br>
+        一行一个最稳——店名里带逗号、顿号都不会被拆坏。
+      </div>
+      <textarea id="io" placeholder="# 勤学园&#10;老王砂锅&#10;川味小炒&#10;&#10;# 进取园&#10;兰州拉面"></textarea>
+      <div class="btnrow" style="margin-top:9px;">
+        <button id="importAdd">追加导入</button>
+        <button id="importReplace">覆盖导入</button>
+        <button id="exportBtn">导出备份</button>
+      </div>
+
+      <div id="groups"></div>
+
+      <div class="tools">
+        <button id="syncBtn">同步内置菜单</button>
+        <button id="resetBtn">清空所有店铺</button>
+      </div>
+    </details>
+  </div>
+
+  <div class="foot">小京做给主人的 🍚</div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ==== 默认数据：园区来自主人截图，店铺待补 ==== */
+  const DEFAULTS = [
+    { name:"优选店铺", items:[
+      "亨德士汉堡",
+      "赫大姐麻辣香锅",
+      "0090汉堡工厂",
+      "砂锅鸡，砂锅粉",
+      "干锅烤肉饭",
+      "凉皮烤冷面煎饼果子锡纸粉",
+      "隆江猪肘饭",
+      "擂神大圣辣椒炒肉",
+      "小食袋拌鸡架＆大碗鸡肉饭",
+      "悦轻荷自选轻食/恰巴塔",
+      "大炸院炸串",
+      "山西烧饼牛肉汤羊杂汤",
+      "滑蛋饭+黑鸭煲+咸肉菜饭",
+      "大块牛肉捞肉饭＆小炒盖饭",
+      "老何热卤拌饭",
+      "忆碗好饭中式快餐",
+      "轻食三明治卤味炒饭",
+      "荔枝鸡牛肉双拼饭"
+    ] },
+    { name:"勤学园", items:[
+      "手工虾滑小坛焖肉",
+      "校园味道",
+      "自选水饺＆黑鸦卤货",
+      "牛杂面",
+      "瓦香鸡",
+      "浇汁烤肉脆皮鸡＆酱肉饭",
+      "喜翻拌麻辣拌",
+      "真心粥铺",
+      "滑蛋饭",
+      "小锅焖面＆茶港面",
+      "安小鱼麻辣烫",
+      "富庄阁烤鸭拌饭",
+      "麻辣手拍粉",
+      "粒粒皆辛苦",
+      "朱家小馆羊杂面",
+      "如意米线海南粉",
+      "辣椒炒肉＆鲜炒鸡",
+      "鸡腿饭韩式拌饭",
+      "老何热卤拌饭",
+      "一品韩餐",
+      "张记肠粉"
+    ] },
+    { name:"进取园", items:[
+      "和珅府猪肘饭",
+      "白象天下好面",
+      "如意米线海南粉",
+      "李家虾滑.盖浇饭",
+      "新疆炒米粉",
+      "小蛮螺炒拌饭",
+      "山西烧饼牛肉汤羊杂汤",
+      "凉皮烤冷面煎饼果子锡纸粉",
+      "荔枝鸡牛肉双拼饭",
+      "咖喱饭.川香水煮",
+      "功夫包子.小馄饨",
+      "川味面馆炒面",
+      "牛肉饭",
+      "滋香记鸡架拌面砂锅面"
+    ] },
+    { name:"严谨园", items:[
+      "悦轻荷自选轻食/恰巴塔",
+      "0090汉堡工厂",
+      "隆江猪肘饭",
+      "滑蛋饭+黑鸭煲+咸肉菜饭",
+      "好粥道＆自选饺子",
+      "擂神大圣辣椒炒肉",
+      "默默鸭货炒饭",
+      "盛京私房焖肉饭",
+      "砂锅鸡，砂锅粉",
+      "大块牛肉捞肉饭＆小炒盖饭",
+      "无名缘米粉/米线",
+      "王宏龙馋嘴鱼",
+      "聚缘巴蜀麻辣香锅、麻辣烫/拌",
+      "干锅烤肉饭",
+      "淮南牛肉汤葱油饼+凉皮",
+      "兰州牛肉面＆盖浇面",
+      "赫掌门铁板饭",
+      "比我老油泼面",
+      "西雅苏新疆炒米粉",
+      "小笼包烧麦",
+      "陕西擀面皮肉夹馍",
+      "朱家小馆羊杂面",
+      "忆碗好饭中式快餐"
+    ] },
+    { name:"求实园", items:[
+      "大炸院炸串",
+      "筋武道面馆鸡架拌面",
+      "陈亮手工面",
+      "刀削面",
+      "亨德士汉堡"
+    ] },
+    { name:"文创园", items:[
+      "校园香炸 炸串 脆皮鸡饭",
+      "摊个饼煎饼店",
+      "赫大姐麻辣香锅"
+    ] },
+    { name:"石榴园餐厅", items:[
+      "炙香烤肉拌饭＆烤鸭饭",
+      "小食袋拌鸡架＆大碗鸡肉饭",
+      "YOYO炸鸡汉堡",
+      "伊麦香盖饭",
+      "桦南黏糊大碗麻辣烫·手工炸串"
+    ] },
+    { name:"教工食堂", items:[
+      "干锅鸡"
+    ] },
+    { name:"琢玉坊", items:[
+      "轻食三明治卤味炒饭",
+      "琢食记 寿司"
+    ] }
+  ];
+
+  /* 小京的留言——按店名自动挑一句 */
+  const RULES = [
+    { k:/饭|米|粥/,
+      m:["有饭！主人懂小京 🍚","米饭派赢啦 🍚","这家的饭小京也想吃 🍚","干饭人干饭魂 🍚","主食到位，下午有劲 💪"] },
+    { k:/麻辣|辣|香锅|冒菜|串|烧烤/,
+      m:["辣的！记得配瓶水哦","小心上火呀主人 🔥","重口味的一天 🌶️","吃完记得喝点酸奶"] },
+    { k:/汉堡|炸鸡|炸|薯|鸡排|烤/,
+      m:["油炸的快乐，偶尔放纵一下嘛","罪恶但好吃 😋","小京也想咬一口","今天先不管热量啦"] },
+    { k:/饺|馄饨|包子|烧麦|饼|馍|馒/,
+      m:["热乎乎的一口，很踏实","这个扛饿，选得好 👍","皮薄馅大才是正义"] },
+    { k:/面|粉|线|冷面/,
+      m:["吸溜吸溜～汤汤水水最治愈","面食派今天赢啦","咕嘟咕嘟，暖胃 🍜"] },
+    { k:/虾|鱼|蟹|海鲜/,
+      m:["鲜的！今天有口福了 🐟","海鲜派，讲究～","这个吃着不腻"] },
+    { k:/寿司|日料|韩|拌|咖喱/,
+      m:["换个口味也不错哦","清爽的选择 ✨","异国风味，今天有点讲究"] },
+    { k:/轻食|沙拉|三明治|减脂|低卡/,
+      m:["主人今天很自律呢 ✨","吃草也要吃饱哦","健康一餐，小京记你一功"] },
+    { k:/奶茶|茶|果|甜|冰/,
+      m:["饮料也算一顿？主人开心就好 😊","喝点甜的，心情会变好"] }
+  ];
+  const GENERIC = [
+    "就它了！","这个不错哦～","嗯，很合理。","决定了，不许反悔！",
+    "今天运气可以诶","走，去吃！","小京批准了 ✅","不许纠结了，就这家",
+    "缘分到了，去试试吧","再犹豫就凉了哦 ⏰"
+  ];
+
+  const KEY = "lunch.groups.v2";
+  const KEY_LAST = "lunch.lastshop.v2";
+  const KEY_HIST = "lunch.histshop.v2";
+  const KEY_VER = "lunch.dataver.v2";
+  const ALL = "__ALL__";
+
+  /* ⚠️ 小京每次更新下面 DEFAULTS 里的店铺，就把 DATA_VER +1。
+     主人刷新页面时会自动同步成最新的，不用手动点。 */
+  const DATA_VER = 8;
+
+  const $ = id => document.getElementById(id);
+  const nameEl=$("name"), whereEl=$("where"), commentEl=$("comment"), histEl=$("history");
+  const tabsEl=$("tabs"), groupsEl=$("groups"), totalEl=$("total"), ioEl=$("io");
+  const spinBtn=$("spin"), againBtn=$("again"), afterRow=$("afterRow");
+
+  let groups = read(KEY, clone(DEFAULTS));
+  let lastPick = localStorage.getItem(KEY_LAST) || "";
+  let history = read(KEY_HIST, []);
+  let current = ALL;
+  let spinning = false;
+
+  // 内置菜单版本变了（= 小京更新过）→ 自动换成最新的
+  try{
+    const seen = Number(localStorage.getItem(KEY_VER) || 0);
+    if(seen !== DATA_VER){
+      groups = clone(DEFAULTS);
+      localStorage.setItem(KEY_VER, String(DATA_VER));
+    }
+  }catch(e){}
+
+  function clone(x){ return JSON.parse(JSON.stringify(x)); }
+  function pickOne(a){ return a[Math.floor(Math.random()*a.length)]; }
+  function commentFor(text){
+    for(let i=0;i<RULES.length;i++){ if(RULES[i].k.test(text)) return pickOne(RULES[i].m); }
+    return pickOne(GENERIC);
+  }
+  function read(k, fb){
+    try{ const v = JSON.parse(localStorage.getItem(k)); return Array.isArray(v) ? v : fb; }
+    catch(e){ return fb; }
+  }
+  function save(){
+    try{
+      localStorage.setItem(KEY, JSON.stringify(groups));
+      localStorage.setItem(KEY_LAST, lastPick);
+      localStorage.setItem(KEY_HIST, JSON.stringify(history));
+    }catch(e){}
+  }
+
+  /* ==== 当前抽取池 ==== */
+  function pool(){
+    const out = [];
+    groups.forEach(function(g){
+      if(current !== ALL && g.name !== current) return;
+      g.items.forEach(function(it){ out.push({ text: it, group: g.name }); });
+    });
+    if(current !== ALL) return out;
+    // 同一个店在多个园区/优选里出现时，抽"全部"只算一次，避免重复
+    const seen = {};
+    return out.filter(function(x){
+      if(seen[x.text]) return false;
+      seen[x.text] = 1;
+      return true;
+    });
+  }
+
+  /* ==== 渲染 ==== */
+  function renderTabs(){
+    tabsEl.innerHTML = "";
+    const list = [{ n: ALL, label: "全部" }].concat(groups.map(function(g){ return { n: g.name, label: g.name + " (" + g.items.length + ")" }; }));
+    list.forEach(function(t){
+      const el = document.createElement("div");
+      el.className = "tab" + (current === t.n ? " on" : "");
+      el.textContent = t.label;
+      el.onclick = function(){
+        current = t.n;
+        renderTabs();
+        nameEl.className = ""; nameEl.textContent = "准备好了吗";
+        whereEl.textContent = ""; commentEl.textContent = "点下面的按钮，小京帮你决定～";
+        commentEl.className = "";
+        afterRow.style.display = "none";
+        updateSpin();
+      };
+      tabsEl.appendChild(el);
+    });
+  }
+
+  function renderManage(){
+    groupsEl.innerHTML = "";
+    let total = 0;
+    groups.forEach(function(g, gi){
+      total += g.items.length;
+      const box = document.createElement("div");
+      box.className = "group";
+
+      const head = document.createElement("div");
+      head.className = "ghead";
+      const title = document.createElement("span");
+      title.textContent = g.name + " · " + g.items.length + " 家";
+      const del = document.createElement("span");
+      del.className = "del"; del.textContent = "删除这个园区";
+      del.onclick = function(){
+        if(!confirm("删掉「" + g.name + "」和它下面的 " + g.items.length + " 家店？")) return;
+        groups.splice(gi,1);
+        if(current === g.name) current = ALL;
+        save(); renderTabs(); renderManage(); updateSpin();
+      };
+      head.appendChild(title); head.appendChild(del);
+      box.appendChild(head);
+
+      if(g.items.length === 0){
+        const e = document.createElement("div");
+        e.className = "empty";
+        e.textContent = "还没有店铺，用上面的框导入吧";
+        box.appendChild(e);
+      }else{
+        const ul = document.createElement("ul");
+        g.items.forEach(function(it, ii){
+          const li = document.createElement("li");
+          const s = document.createElement("span"); s.textContent = it;
+          const x = document.createElement("span"); x.className="x"; x.textContent="×";
+          x.onclick = function(){
+            g.items.splice(ii,1);
+            save(); renderTabs(); renderManage(); updateSpin();
+          };
+          li.appendChild(s); li.appendChild(x);
+          ul.appendChild(li);
+        });
+        box.appendChild(ul);
+      }
+      groupsEl.appendChild(box);
+    });
+    totalEl.textContent = total;
+  }
+
+  function renderHistory(){
+    histEl.textContent = history.length ? ("最近：" + history.slice(0,5).join(" · ")) : "";
+  }
+
+  function updateSpin(){
+    const n = pool().length;
+    spinBtn.disabled = spinning || n === 0;
+    if(n === 0){
+      spinBtn.textContent = "这个园区是空的";
+    }else if(!spinning){
+      spinBtn.textContent = "抽 一 个";
+    }
+  }
+
+  /* ==== 抽取 ==== */
+  function pickFinal(){
+    const p = pool();
+    let cand = p.filter(function(x){ return x.text !== lastPick; });
+    if(cand.length === 0) cand = p;
+    return cand[Math.floor(Math.random()*cand.length)];
+  }
+
+  function spin(){
+    const p = pool();
+    if(spinning || p.length === 0) return;
+    spinning = true; updateSpin();
+
+    if(p.length === 1){
+      finish(p[0]);
+      return;
+    }
+
+    const fin = pickFinal();
+    afterRow.style.display = "none";
+    commentEl.textContent = "小京正在摇…";
+    commentEl.className = "";
+    let delay = 45, elapsed = 0;
+
+    (function tick(){
+      const r = p[Math.floor(Math.random()*p.length)];
+      nameEl.textContent = r.text;
+      nameEl.className = "rolling";
+      whereEl.textContent = "";
+      elapsed += delay;
+      if(elapsed > 1500){
+        finish(fin);
+        return;
+      }
+      delay = delay * 1.09 + 2;
+      setTimeout(tick, delay);
+    })();
+  }
+
+  function finish(pick){
+    nameEl.textContent = pick.text;
+    nameEl.className = "";
+    void nameEl.offsetWidth;
+    nameEl.className = "settle";
+    whereEl.textContent = "来自 " + pick.group;
+
+    const cp = commentFor(pick.text);
+    commentEl.textContent = "🍚 小京：" + cp;
+    commentEl.className = "say";
+
+    lastPick = pick.text;
+    history = [pick.text].concat(history.filter(function(v){ return v !== pick.text; })).slice(0,5);
+    afterRow.style.display = "flex";
+    spinning = false;
+    save(); renderHistory(); updateSpin();
+  }
+
+  /* ==== 导入 / 导出 ==== */
+  function parse(text){
+    const out = [];
+    let cur = null;
+    text.split(/\r?\n/).forEach(function(raw){
+      let line = raw.trim();
+      if(!line) return;
+      let m = line.match(/^#\s*(.+)$/) || line.match(/^【(.+)】$/);
+      if(m){
+        const nm = m[1].trim();
+        cur = out.filter(function(g){ return g.name === nm; })[0];
+        if(!cur){ cur = { name: nm, items: [] }; out.push(cur); }
+        return;
+      }
+      if(!cur){ cur = { name: "未分组", items: [] }; out.push(cur); }
+      // 一行 = 一个店名，不拆分（店名里可能有逗号/顿号）
+      if(cur.items.indexOf(line) < 0) cur.items.push(line);
+    });
+    return out;
+  }
+
+  function doImport(replace){
+    const parsed = parse(ioEl.value);
+    if(parsed.length === 0){ alert("没读到内容呀，检查一下格式？"); return; }
+    if(replace && !confirm("会用新内容替换掉现有的全部店铺，确定吗？")) return;
+    if(replace){
+      groups = parsed;
+      current = ALL;
+    }else{
+      parsed.forEach(function(pg){
+        const exist = groups.filter(function(g){ return g.name === pg.name; })[0];
+        if(exist){
+          pg.items.forEach(function(it){ if(exist.items.indexOf(it) < 0) exist.items.push(it); });
+        }else{
+          groups.push(pg);
+        }
+      });
+    }
+    save(); renderTabs(); renderManage(); updateSpin();
+    ioEl.value = "";
+    alert(replace ? "覆盖导入完成 ✅" : "追加导入完成 ✅");
+  }
+
+  function doExport(){
+    let s = "";
+    groups.forEach(function(g){
+      s += "# " + g.name + "\n";
+      s += g.items.length ? (g.items.join("\n") + "\n") : "";
+      s += "\n";
+    });
+    ioEl.value = s.trim();
+    ioEl.select();
+    alert("已经填在下面的框里了，主人复制走保存就行～");
+  }
+
+  /* ==== 口令锁 ==== */
+  /* 🔑 口令的校验值（不是明文，看源码也读不出口令）
+     当前口令：chifan      想改 → 跟小京说一声 */
+  const PASS_HASH = "fe9eee92b0c0fda8";
+  const GATE_KEY = "lunch.unlocked";
+
+  function hashStr(s){
+    let h1 = 0x811c9dc5, h2 = 0x01000193;
+    for(let i=0;i<s.length;i++){
+      const c = s.charCodeAt(i);
+      h1 = (h1 ^ c) >>> 0; h1 = Math.imul(h1, 16777619) >>> 0;
+      h2 = (h2 + c * (i + 7)) >>> 0; h2 = Math.imul(h2, 2654435761) >>> 0;
+    }
+    return (h1 >>> 0).toString(16).padStart(8,"0") + (h2 >>> 0).toString(16).padStart(8,"0");
+  }
+
+  let gateUp = false;
+  function initGate(){
+    const gate = document.querySelector(".gate");
+    if(!gate || document.documentElement.className === "unlocked") return;
+    gateUp = true;
+
+    const box = document.getElementById("gatebox");
+    const input = document.getElementById("pass");
+    const err = document.getElementById("gateerr");
+
+    function tryUnlock(){
+      if(hashStr(input.value.trim()) === PASS_HASH){
+        try{ localStorage.setItem(GATE_KEY, "1"); }catch(e){}
+        gateUp = false;
+        gate.style.display = "none";
+      }else{
+        err.textContent = "口令不对哦，再想想～";
+        input.value = "";
+        input.focus();
+        box.classList.remove("shake");
+        void box.offsetWidth;
+        box.classList.add("shake");
+      }
+    }
+
+    document.getElementById("unlock").onclick = tryUnlock;
+    input.addEventListener("keydown", function(e){
+      if(e.key === "Enter"){ e.preventDefault(); tryUnlock(); }
+    });
+    input.focus();
+  }
+
+  /* ==== 事件 ==== */
+  spinBtn.onclick = spin;
+  againBtn.onclick = spin;
+  $("importAdd").onclick = function(){ doImport(false); };
+  $("importReplace").onclick = function(){ doImport(true); };
+  $("exportBtn").onclick = doExport;
+  $("syncBtn").onclick = function(){
+    if(!confirm("用文件里内置的最新菜单覆盖当前内容？")) return;
+    groups = clone(DEFAULTS);
+    current = ALL;
+    save(); renderTabs(); renderManage(); updateSpin();
+  };
+  $("resetBtn").onclick = function(){
+    if(!confirm("清空所有店铺（园区名保留）？")) return;
+    groups.forEach(function(g){ g.items = []; });
+    current = ALL;
+    save(); renderTabs(); renderManage(); updateSpin();
+  };
+
+  document.addEventListener("keydown", function(e){
+    if(gateUp) return;
+    const t = e.target;
+    if(t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+    if(e.code === "Space" || e.key === "Enter"){ e.preventDefault(); spin(); }
+  });
+
+  renderTabs(); renderManage(); renderHistory(); updateSpin(); initGate();
+  if(lastPick){ nameEl.textContent = lastPick; commentEl.textContent = "上次抽的是这家"; }
+})();
+</script>
+</body>
+</html>
